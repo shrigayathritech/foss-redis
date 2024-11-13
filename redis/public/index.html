@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        #notifications {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: white;
+            height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Send Notifications</h1>
+    <input type="text" id="userId" placeholder="User ID" />
+    <input type="text" id="notification" placeholder="Notification Message" />
+    <button id="connectBtn">Connect</button>
+    <button id="sendBtn" disabled>Send Notification</button>
+
+    <h2>Received Notifications:</h2>
+    <div id="notifications"></div>
+
+    <script>
+        let socket;
+        const userIdInput = document.getElementById('userId');
+        const notificationInput = document.getElementById('notification');
+        const connectBtn = document.getElementById('connectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const notificationsDiv = document.getElementById('notifications');
+    
+        connectBtn.addEventListener('click', () => {
+            const userId = userIdInput.value;
+    
+            if (!userId) {
+                alert("Please enter a user ID");
+                return;
+            }
+    
+            // WebSocket connection
+            socket = new WebSocket(`ws://localhost:4000/${userId}`);
+    
+            socket.onopen = () => {
+                console.log(`Connected as user ${userId}`);
+                sendBtn.disabled = false;
+            };
+    
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const notification = document.createElement('div');
+                notification.textContent = `Notification: ${data.notification}`;
+                notificationsDiv.appendChild(notification);
+                notificationsDiv.scrollTop = notificationsDiv.scrollHeight; // Auto scroll
+            };
+    
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+    
+            socket.onclose = () => {
+                console.log(`User ${userId} disconnected`);
+                sendBtn.disabled = true;
+            };
+        });
+    
+        sendBtn.addEventListener('click', () => {
+            const userId = userIdInput.value;
+            const notification = notificationInput.value;
+    
+            // Send notification via POST request
+            fetch('/send-notification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, notification })
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('Notification sent successfully');
+                } else {
+                    console.error('Failed to send notification');
+                }
+            })
+            .catch(err => console.error('Error:', err));
+        });
+    </script>
+    
+</body>
+</html>
